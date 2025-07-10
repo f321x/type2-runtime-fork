@@ -39,7 +39,7 @@ tar xf 0.5.2.tar.gz
 pushd squashfuse-*/
 ./autogen.sh
 ./configure LDFLAGS="-static"
-make -j"$(nproc)"
+make -j1
 make install
 /usr/bin/install -c -m 644 ./*.h '/usr/local/include/squashfuse'
 popd

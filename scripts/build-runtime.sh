@@ -8,8 +8,10 @@ set -euo pipefail
 out_dir="$(readlink -f "$(pwd)")"/out
 mkdir -p "$out_dir"
 
-# we create a temporary build directory
-build_dir="$(mktemp -d -t type2-runtime-build-XXXXXX)"
+# we create a temporary build directory with a fixed name for reproducibility
+build_dir="$(readlink -f "$(pwd)")"/build-runtime-temp
+rm -rf "$build_dir"
+mkdir -p "$build_dir"
 
 # since the plain ol' Makefile doesn't support out-of-source builds at all, we need to copy all the files
 cp -R src "$build_dir"/
@@ -17,13 +19,14 @@ cp -R src "$build_dir"/
 pushd "$build_dir"
 
 pushd src/runtime/
-make -j"$(nproc)" runtime
+make -j1 runtime
 
 file runtime
 
 objcopy --only-keep-debug runtime runtime.debug
 
-strip --strip-debug --strip-unneeded runtime
+# strip --strip-debug --strip-unneeded runtime
+strip --strip-all runtime
 
 ls -lh runtime runtime.debug
 
@@ -50,7 +53,7 @@ fi
 mv runtime runtime-"$architecture"
 mv runtime.debug runtime-"$architecture".debug
 
-objcopy --add-gnu-debuglink runtime-"$architecture".debug runtime-"$architecture"
+# objcopy --add-gnu-debuglink runtime-"$architecture".debug runtime-"$architecture"
 
 # "classic" magic bytes which cannot be embedded with compiler magic, always do AFTER strip
 # needs to be done after calls to objcopy, strip etc.
@@ -61,3 +64,8 @@ cp runtime-"$architecture" "$out_dir"/
 cp runtime-"$architecture".debug "$out_dir"/
 
 ls -al "$out_dir"
+
+# cleanup
+popd  # return to build_dir
+popd  # return to original working directory
+rm -rf "$build_dir"
